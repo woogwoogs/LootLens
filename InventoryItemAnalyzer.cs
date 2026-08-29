@@ -196,6 +196,7 @@ public partial class InventoryItemAnalyzer : BaseSettingsPlugin<Settings>
             }
 
             DrawVisibleStashStars();
+            DrawRitualWindowStars();
 
             if (inventoryHandled || !Settings.ShowItemInfo)
                 return;
@@ -1750,6 +1751,45 @@ public partial class InventoryItemAnalyzer : BaseSettingsPlugin<Settings>
             _visibleStashStars.Clear();
             _stashStarSnapshotValid = false;
             _nextStashStarRefreshTicks = 0;
+        }
+    }
+
+    private void DrawRitualWindowStars()
+    {
+        try
+        {
+            var ritualWindow = GameController?.IngameState?.IngameUi?
+                .RitualWindow;
+            if (ritualWindow == null || !ritualWindow.IsValid ||
+                !ritualWindow.IsVisible)
+                return;
+
+            var rewardItems = ritualWindow.Items;
+            if (rewardItems == null)
+                return;
+
+            // Few items and per-entity rating caching make a per-frame walk
+            // cheap; no snapshot needed like the stash grid uses.
+            foreach (var rewardItem in rewardItems)
+            {
+                var itemEntity = rewardItem?.Item;
+                if (itemEntity == null || itemEntity.Address == 0 ||
+                    !itemEntity.IsValid ||
+                    itemEntity.GetComponent<Mods>() == null)
+                    continue;
+
+                var rect = rewardItem.GetClientRect();
+                if (rect.Width <= 0f || rect.Height <= 0f)
+                    continue;
+
+                var rating = GetCachedRating(itemEntity);
+                var specialStars = GetCachedSpecialStars(itemEntity);
+                if (rating > 0 || specialStars > 0)
+                    DrawQualityStars(rect, rating, specialStars);
+            }
+        }
+        catch
+        {
         }
     }
 
