@@ -118,16 +118,30 @@ public class Settings : ISettings
     public ToggleNode ShowItemInfo { get; set; } = new(true);
 
     [Menu("Always Show Item Info")]
-    public ToggleNode AlwaysShowItemInfo { get; set; } = new(true);
+    public ToggleNode AlwaysShowItemInfo { get; set; } = new(false);
 
     [Menu("Item Info - Hold Key for Full Analyzer")]
-    public HotkeyNode ItemInfoHotkey { get; set; } = new(Keys.Menu);
+    public HotkeyNode ItemInfoHotkey { get; set; } = new(Keys.F8);
 
     [Menu("Item Info - Show Equipped Items")]
     public ToggleNode ItemInfoShowEquippedItems { get; set; } = new(true);
 
     [Menu("Item Info - Minimal Scale")]
-    public RangeNode<int> ItemInfoMinimalScale { get; set; } = new(115, 70, 130);
+    public RangeNode<int> ItemInfoMinimalScale { get; set; } = new(140, 80, 180);
+
+    // 0 = current affix tier, 1 = all tiers valid for the base,
+    // 2 = all base-valid tiers reachable at the item's item level.
+    public RangeNode<int> ItemInfoPerfectionRange { get; set; } = new(0, 0, 2);
+
+    // 0 = full brightness, 1 = dimmed, 2 = hidden.
+    public RangeNode<int> ItemInfoFixedUniqueMods { get; set; } = new(1, 0, 2);
+
+    // Retained for config compatibility. V74 shows the roll percentage without
+    // repeating a textual range beside every modifier.
+    public ToggleNode ItemInfoShowTierRanges { get; set; } = new(true);
+    public ToggleNode ItemInfoShowImplicitModifiers { get; set; } = new(false);
+    public ToggleNode ItemInfoShowOverallPerfection { get; set; } = new(true);
+    public ToggleNode ItemInfoFullStatColors { get; set; } = new(false);
 
 
 
@@ -316,7 +330,7 @@ public class Settings : ISettings
 
 
     [Menu("Item Info - Compact Mode")]
-    public ToggleNode ItemInfoCompactMode { get; set; } = new(true);
+    public ToggleNode ItemInfoCompactMode { get; set; } = new(false);
 
 
     [Menu("Item Info - Width")]

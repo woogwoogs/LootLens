@@ -90,13 +90,26 @@ public partial class InventoryItemAnalyzer
         ColorNodeEditor("Border", Settings.ItemInfoBorder);
         ColorNodeEditor("Tier Highlight", Settings.ItemInfoTierColor);
 
+        ImGui.Spacing();
+        ImGui.TextDisabled("MODIFIER ANALYSIS");
+        ImGui.Separator();
+        DrawPerfectionRangeSelector();
+        DrawFixedUniqueModsSelector();
+        Toggle("Full stat colors", Settings.ItemInfoFullStatColors);
+        ImGui.TextDisabled(
+            "Colors modifier text as well as its accent and roll track.");
+        Toggle("Show implicit modifiers", Settings.ItemInfoShowImplicitModifiers);
+        Toggle("Show unique item perfection",
+            Settings.ItemInfoShowOverallPerfection);
+
         if (ImGui.Button("Reset Analyzer Appearance"))
         {
             Settings.ItemInfoWidth.Value = 310;
-            Settings.ItemInfoMinimalScale.Value = 115;
+            Settings.ItemInfoMinimalScale.Value = 140;
             Settings.ItemInfoBackground.Value = new SharpDX.Color(0, 0, 0, 236);
             Settings.ItemInfoBorder.Value = new SharpDX.Color(0, 0, 0, 0);
             Settings.ItemInfoTierColor.Value = SharpDX.Color.Gold;
+            Settings.ItemInfoFullStatColors.Value = false;
         }
 
         if (ShouldShowAnalyzerKeybind())
@@ -112,7 +125,72 @@ public partial class InventoryItemAnalyzer
         {
             Toggle("Debug Mode", Settings.ItemInfoDebugMode);
             ImGui.TextDisabled("Shows diagnostic item-member data in the full analyzer.");
+            ImGui.TextDisabled($"PoE1 database: {_itemDatabase.BaseCount} bases | " +
+                               $"{_itemDatabase.ModCount} mods | " +
+                               $"{_itemDatabase.UniqueCount} uniques");
         }
+    }
+
+    private void DrawPerfectionRangeSelector()
+    {
+        var mode = Math.Clamp(Settings.ItemInfoPerfectionRange.Value, 0, 2);
+        ImGui.Text("Roll comparison");
+        ImGui.SameLine();
+        if (ImGui.RadioButton("Current Tier##roll_range", mode == 0))
+        {
+            Settings.ItemInfoPerfectionRange.Value = 0;
+            mode = 0;
+        }
+        ImGui.SameLine();
+        if (ImGui.RadioButton("All Valid Tiers##roll_range", mode == 1))
+        {
+            Settings.ItemInfoPerfectionRange.Value = 1;
+            mode = 1;
+        }
+        ImGui.SameLine();
+        if (ImGui.RadioButton("Item-Level Reachable##roll_range", mode == 2))
+        {
+            Settings.ItemInfoPerfectionRange.Value = 2;
+            mode = 2;
+        }
+
+        ImGui.TextDisabled(mode switch
+        {
+            1 => "Compares the roll against every tier valid for this PoE1 base.",
+            2 => "Compares the roll against base-valid tiers reachable at this item level.",
+            _ => "Compares the roll only against its current affix tier."
+        });
+    }
+
+    private void DrawFixedUniqueModsSelector()
+    {
+        var mode = Math.Clamp(Settings.ItemInfoFixedUniqueMods.Value, 0, 2);
+        ImGui.Text("Fixed unique mods");
+        ImGui.SameLine();
+        if (ImGui.RadioButton("Full##fixed_unique", mode == 0))
+        {
+            Settings.ItemInfoFixedUniqueMods.Value = 0;
+            mode = 0;
+        }
+        ImGui.SameLine();
+        if (ImGui.RadioButton("Dimmed##fixed_unique", mode == 1))
+        {
+            Settings.ItemInfoFixedUniqueMods.Value = 1;
+            mode = 1;
+        }
+        ImGui.SameLine();
+        if (ImGui.RadioButton("Hidden##fixed_unique", mode == 2))
+        {
+            Settings.ItemInfoFixedUniqueMods.Value = 2;
+            mode = 2;
+        }
+
+        ImGui.TextDisabled(mode switch
+        {
+            0 => "Shows fixed unique modifiers at normal brightness.",
+            2 => "Hides fixed unique modifiers and emphasizes variable rolls only.",
+            _ => "Dims fixed unique modifiers so variable roll percentages stand out."
+        });
     }
 
     private void DrawItemInfoModeSelector()
@@ -160,22 +238,22 @@ public partial class InventoryItemAnalyzer
 
         ImGui.Text("Default View");
         ImGui.SameLine();
-        if (ImGui.RadioButton("Compact (Recommended)##analyzer_view", compact))
+        if (ImGui.RadioButton("Compact##analyzer_view", compact))
         {
             Settings.ItemInfoCompactMode.Value = true;
             compact = true;
         }
 
         ImGui.SameLine();
-        if (ImGui.RadioButton("Full##analyzer_view", !compact))
+        if (ImGui.RadioButton("Full Analysis (Recommended)##analyzer_view", !compact))
         {
             Settings.ItemInfoCompactMode.Value = false;
             compact = false;
         }
 
         ImGui.TextDisabled(compact
-            ? "Uses the small summary panel; hold the analyzer key for full modifier details."
-            : "Shows the complete modifier and tier breakdown by default.");
+            ? "Uses the original small PoE1 rating strip; hold the analyzer key for full modifier details."
+            : "Uses a compact analysis strip with JSON-backed roll quality, tiers, and perfection.");
     }
 
     private bool ShouldShowAnalyzerKeybind()

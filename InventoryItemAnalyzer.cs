@@ -29,7 +29,7 @@ public partial class InventoryItemAnalyzer : BaseSettingsPlugin<Settings>
         // namespace/assembly identity so existing saved settings continue to
         // load after the LootLens rebrand.
         Name = "LootLens";
-        Description = "Detailed item inspection, tiers, defenses and loot rating.";
+        Description = "PoE1 modifier rolls, tiers, defenses and configurable loot ratings.";
     }
 
     private HoverItemIcon _hoverItemIcon;
@@ -82,6 +82,8 @@ public partial class InventoryItemAnalyzer : BaseSettingsPlugin<Settings>
 
     public override bool Initialise()
     {
+        _itemDatabase = Poe1ItemDatabase.Load(DirectoryFullName);
+
         // V43 shipped with only the recommended Boots rules. Upgrade that
         // untouched legacy default automatically so existing users receive
         // the new all-slot rule set without deleting their settings file.
@@ -2056,14 +2058,16 @@ public partial class InventoryItemAnalyzer : BaseSettingsPlugin<Settings>
             }
         }
 
-        if (uniquePerfection?.Percentage >= 0)
+        if (Settings.ItemInfoShowOverallPerfection.Value &&
+            uniquePerfection?.Percentage >= 0)
         {
             rows.Add($"UNIQUE PERFECTION|{uniquePerfection.Percentage}|" +
                      $"{uniquePerfection.VariableRollCount}|{uniquePerfection.VariableModCount}");
         }
 
         if (details.Count == 0 && (specialMods == null || specialMods.Count == 0) &&
-            uniquePerfection?.Percentage < 0)
+            (!Settings.ItemInfoShowOverallPerfection.Value ||
+             uniquePerfection?.Percentage < 0))
             return rows;
 
         if (rating > 0 && details.Count > 0)
@@ -2160,7 +2164,8 @@ public partial class InventoryItemAnalyzer : BaseSettingsPlugin<Settings>
         foreach (var row in BuildModRows(item, mods))
             rows.Add(row);
 
-        if (uniquePerfection?.Percentage >= 0)
+        if (Settings.ItemInfoShowOverallPerfection.Value &&
+            uniquePerfection?.Percentage >= 0)
         {
             rows.Add(string.Empty);
             rows.Add($"UNIQUE PERFECTION|{uniquePerfection.Percentage}|" +
@@ -3212,7 +3217,7 @@ public partial class InventoryItemAnalyzer : BaseSettingsPlugin<Settings>
 
         if (!Settings.ItemInfoDebugMode.Value)
         {
-            DrawMinimalFullOverlay(overlayAnchor, rows, attachedToTooltip);
+            DrawLootLens2StyleFullOverlay(overlayAnchor, item, mods, rows);
             return;
         }
 
@@ -4483,7 +4488,7 @@ public partial class InventoryItemAnalyzer : BaseSettingsPlugin<Settings>
 
     private float GetMinimalUiScale()
     {
-        return Math.Clamp(Settings.ItemInfoMinimalScale.Value / 100f, .70f, 1.30f);
+        return Math.Clamp(Settings.ItemInfoMinimalScale.Value / 100f, .80f, 1.80f);
     }
 
     private void DrawMinimalCardBackground(ImGuiNET.ImDrawListPtr draw,
@@ -5471,20 +5476,20 @@ public partial class InventoryItemAnalyzer : BaseSettingsPlugin<Settings>
 
     private static uint GetCompactStatColor(string stat)
     {
-        if (Contains(stat, "Cold Resistance")) return ToImGuiColor(new Color(90, 190, 255, 255));
-        if (Contains(stat, "Fire Resistance")) return ToImGuiColor(new Color(255, 112, 58, 255));
-        if (Contains(stat, "Lightning Resistance")) return ToImGuiColor(new Color(245, 210, 70, 255));
-        if (Contains(stat, "Chaos Resistance")) return ToImGuiColor(new Color(190, 105, 225, 255));
-        if (Contains(stat, "Resistance")) return ToImGuiColor(new Color(175, 185, 225, 255));
+        if (Contains(stat, "Cold Resistance") || Contains(stat, "Cold Res")) return ToImGuiColor(new Color(90, 190, 255, 255));
+        if (Contains(stat, "Fire Resistance") || Contains(stat, "Fire Res")) return ToImGuiColor(new Color(255, 112, 58, 255));
+        if (Contains(stat, "Lightning Resistance") || Contains(stat, "Lightning Res")) return ToImGuiColor(new Color(245, 210, 70, 255));
+        if (Contains(stat, "Chaos Resistance") || Contains(stat, "Chaos Res")) return ToImGuiColor(new Color(190, 105, 225, 255));
+        if (Contains(stat, "Resistance") || Contains(stat, " Res")) return ToImGuiColor(new Color(175, 185, 225, 255));
         if (Contains(stat, "Life")) return ToImGuiColor(new Color(235, 90, 105, 255));
         if (Contains(stat, "Armour") || Contains(stat, "Physical Damage Reduction") ||
             Contains(stat, "Defences")) return ToImGuiColor(new Color(205, 170, 120, 255));
         if (Contains(stat, "Evasion")) return ToImGuiColor(new Color(85, 210, 110, 255));
-        if (Contains(stat, "Energy Shield")) return ToImGuiColor(new Color(75, 215, 238, 255));
+        if (Contains(stat, "Energy Shield") || Contains(stat, " ES")) return ToImGuiColor(new Color(75, 215, 238, 255));
         if (Contains(stat, "Suppression")) return ToImGuiColor(new Color(80, 205, 175, 255));
         if (Contains(stat, "Mana")) return ToImGuiColor(new Color(90, 135, 245, 255));
         if (Contains(stat, "Block") || Contains(stat, "Stun")) return ToImGuiColor(new Color(125, 165, 215, 255));
-        if (Contains(stat, "Movement")) return ToImGuiColor(new Color(105, 220, 95, 255));
+        if (Contains(stat, "Movement") || Contains(stat, "Move Speed")) return ToImGuiColor(new Color(105, 220, 95, 255));
         if (Contains(stat, "Cast Speed")) return ToImGuiColor(new Color(165, 125, 245, 255));
         if (Contains(stat, "Spell Damage")) return ToImGuiColor(new Color(125, 145, 255, 255));
         if (Contains(stat, "Attack Speed")) return ToImGuiColor(new Color(240, 155, 70, 255));
@@ -5496,16 +5501,16 @@ public partial class InventoryItemAnalyzer : BaseSettingsPlugin<Settings>
         if (Contains(stat, "Gem")) return ToImGuiColor(new Color(80, 220, 190, 255));
         if (Contains(stat, "DPS")) return ToImGuiColor(new Color(235, 120, 80, 255));
         if (Contains(stat, "Attribute")) return ToImGuiColor(new Color(220, 180, 90, 255));
-        if (Contains(stat, "Strength")) return ToImGuiColor(new Color(230, 115, 90, 255));
-        if (Contains(stat, "Dexterity")) return ToImGuiColor(new Color(100, 205, 115, 255));
-        if (Contains(stat, "Intelligence")) return ToImGuiColor(new Color(100, 155, 240, 255));
-        if (Contains(stat, "Fire Damage") || Contains(stat, "Ignite")) return ToImGuiColor(new Color(245, 115, 55, 255));
-        if (Contains(stat, "Cold Damage") || Contains(stat, "Freeze") ||
+        if (Contains(stat, "Strength") || Contains(stat, " Str")) return ToImGuiColor(new Color(230, 115, 90, 255));
+        if (Contains(stat, "Dexterity") || Contains(stat, " Dex")) return ToImGuiColor(new Color(100, 205, 115, 255));
+        if (Contains(stat, "Intelligence") || Contains(stat, " Int")) return ToImGuiColor(new Color(100, 155, 240, 255));
+        if (Contains(stat, "Fire Damage") || Contains(stat, "Fire Dmg") || Contains(stat, "Ignite")) return ToImGuiColor(new Color(245, 115, 55, 255));
+        if (Contains(stat, "Cold Damage") || Contains(stat, "Cold Dmg") || Contains(stat, "Freeze") ||
             Contains(stat, "Chill")) return ToImGuiColor(new Color(90, 185, 245, 255));
-        if (Contains(stat, "Lightning Damage") || Contains(stat, "Shock")) return ToImGuiColor(new Color(240, 205, 70, 255));
-        if (Contains(stat, "Chaos Damage")) return ToImGuiColor(new Color(190, 105, 225, 255));
-        if (Contains(stat, "Physical Damage")) return ToImGuiColor(new Color(225, 145, 105, 255));
-        if (Contains(stat, "Elemental Damage")) return ToImGuiColor(new Color(225, 175, 90, 255));
+        if (Contains(stat, "Lightning Damage") || Contains(stat, "Lightning Dmg") || Contains(stat, "Shock")) return ToImGuiColor(new Color(240, 205, 70, 255));
+        if (Contains(stat, "Chaos Damage") || Contains(stat, "Chaos Dmg")) return ToImGuiColor(new Color(190, 105, 225, 255));
+        if (Contains(stat, "Physical Damage") || Contains(stat, "Phys Dmg")) return ToImGuiColor(new Color(225, 145, 105, 255));
+        if (Contains(stat, "Elemental Damage") || Contains(stat, "Ele Dmg")) return ToImGuiColor(new Color(225, 175, 90, 255));
         if (Contains(stat, "Poison")) return ToImGuiColor(new Color(120, 195, 90, 255));
         if (Contains(stat, "Bleed")) return ToImGuiColor(new Color(215, 75, 80, 255));
         if (Contains(stat, "Minion")) return ToImGuiColor(new Color(180, 125, 225, 255));
@@ -5517,12 +5522,12 @@ public partial class InventoryItemAnalyzer : BaseSettingsPlugin<Settings>
         if (Contains(stat, "Power Charge")) return ToImGuiColor(new Color(145, 135, 240, 255));
         if (Contains(stat, "Charge")) return ToImGuiColor(new Color(215, 185, 100, 255));
         if (Contains(stat, "Rarity") || Contains(stat, "Quantity")) return ToImGuiColor(new Color(225, 190, 105, 255));
-        if (Contains(stat, "Regeneration")) return ToImGuiColor(new Color(120, 195, 150, 255));
+        if (Contains(stat, "Regeneration") || Contains(stat, "Regen")) return ToImGuiColor(new Color(120, 195, 150, 255));
         if (Contains(stat, "Leech")) return ToImGuiColor(new Color(210, 105, 145, 255));
         if (Contains(stat, "Curse")) return ToImGuiColor(new Color(175, 115, 220, 255));
         if (Contains(stat, "Aura") || Contains(stat, "Reservation")) return ToImGuiColor(new Color(85, 195, 180, 255));
         if (Contains(stat, "Duration")) return ToImGuiColor(new Color(120, 185, 190, 255));
-        if (Contains(stat, "Damage")) return ToImGuiColor(new Color(205, 140, 105, 255));
+        if (Contains(stat, "Damage") || Contains(stat, "Dmg")) return ToImGuiColor(new Color(205, 140, 105, 255));
         return ToImGuiColor(new Color(190, 195, 205, 255));
     }
 
@@ -7095,6 +7100,10 @@ private bool IsItemInfoPopupVisible()
             case "base_cold_damage_resistance_%": return $"{signed} to Cold Resistance";
             case "base_lightning_damage_resistance_%": return $"{signed} to Lightning Resistance";
             case "base_chaos_damage_resistance_%": return $"{signed} to Chaos Resistance";
+            case "base_maximum_fire_damage_resistance_%": return $"{signed} to maximum Fire Resistance";
+            case "base_maximum_cold_damage_resistance_%": return $"{signed} to maximum Cold Resistance";
+            case "base_maximum_lightning_damage_resistance_%": return $"{signed} to maximum Lightning Resistance";
+            case "base_maximum_chaos_damage_resistance_%": return $"{signed} to maximum Chaos Resistance";
             case "base_maximum_life": return $"{signed} to Maximum Life";
             case "base_maximum_mana": return $"{signed} to Maximum Mana";
             case "base_movement_velocity_+%": return $"{unsigned} increased Movement Speed";
@@ -7122,6 +7131,8 @@ private bool IsItemInfoPopupVisible()
             case "base_cooldown_speed_+%":
             case "cooldown_recovery_+%": return $"{unsigned} increased Cooldown Recovery Rate";
             case "damage_over_time_multiplier_+%": return $"{signed} to Damage over Time Multiplier";
+            case "impale_on_hit_%_chance":
+            case "attacks_impale_on_hit_%_chance": return $"{unsigned} chance to Impale Enemies on Hit with Attacks";
         }
 
         var looksInternal = statText.IndexOf('_') >= 0 ||
